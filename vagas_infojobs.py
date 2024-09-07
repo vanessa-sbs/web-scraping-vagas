@@ -45,10 +45,19 @@ s1 = "body > main > div.home-index-bg > section > div.job-location-filter > div.
 btn_achar_vaga = navegador.find_element(By.CSS_SELECTOR, s1)
 btn_achar_vaga.click()
 
-#Pega lista de vagas
+#Tentativa de simular scroll para pegar as proximas vagas
+#altura = navegador.execute_script("return document.body.scrollHeight")
+#print(altura)
+h1 = navegador.execute_script("window.scrollTo(0,document.body.scrollHeight)")
+print(type(h1))
+sleep(5)
+
+#navegador.execute_script("window.scrollTo("+str(h1)+",document.body.scrollHeight)")
+#Pega primeira lista de vagas
 vagas_lista = navegador.find_elements(By.CSS_SELECTOR, "a[class='text-decoration-none']")
 print(len(vagas_lista))
-print(vagas_lista[1].get_attribute("outerHTML"))
+#print(vagas_lista[1].get_attribute("outerHTML"))
+
 
 
 
