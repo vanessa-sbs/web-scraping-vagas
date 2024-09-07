@@ -13,7 +13,7 @@ from time import sleep
 
 chrome_options = Options()
 chrome_options.add_experimental_option("detach", True) #necessario para navegador não abrir e fechar automaticamente
-#chrome_options.add_argument('window-size=800,1000') #Define o tamanho que vc quer do navegador
+#chrome_options.add_argument('window-size=1500,2000') #Define o tamanho que vc quer do navegador
 #chrome_options.add_argument('--headless')
 chrome_options.add_argument('--incognito')
 
@@ -45,8 +45,23 @@ s1 = "body > main > div.home-index-bg > section > div.job-location-filter > div.
 btn_achar_vaga = navegador.find_element(By.CSS_SELECTOR, s1)
 btn_achar_vaga.click()
 
+#Pega lista de vagas
+vagas_lista = navegador.find_elements(By.CSS_SELECTOR, "a[class='text-decoration-none']")
+print(len(vagas_lista))
+print(vagas_lista[1].get_attribute("outerHTML"))
+
+
+
+#Teste
+#Beneficios/escolraidade/habilidades
+beneficios_lista = navegador.find_elements(By.CLASS_NAME, 'custom-list')
+b1 = [BeautifulSoup(x.get_attribute("outerHTML"), 'html.parser') for x in beneficios_lista]
+#print(b1[0].prettify())
+
+
+########## Uma relção das referencias dos elementos de procura
 #Titulo da vaga
-s2 = "#VacancyHeader > div.d-flex.justify-content-between.text-break.mb-16 > div > h2"
+'''s2 = "#VacancyHeader > div.d-flex.justify-content-between.text-break.mb-16 > div > h2"
 titulo_vaga = navegador.find_element(By.CSS_SELECTOR, s2)
 print(titulo_vaga.text)
 
@@ -88,15 +103,7 @@ print(exigencias_lista[2].text)
 
 #Exiiegncia
 habilidades_lista = navegador.find_elements(By.CSS_SELECTOR, 'div[class*="tag-outline-primary"]')
-print(habilidades_lista[2].text)
-
-
-
-#Teste
-#Beneficios/escolraidade/habilidades
-beneficios_lista = navegador.find_elements(By.CLASS_NAME, 'custom-list')
-b1 = [BeautifulSoup(x.get_attribute("outerHTML"), 'html.parser') for x in beneficios_lista]
-print(b1[0].prettify())
+print(habilidades_lista[2].text)'''
 
 
 
