@@ -13,7 +13,8 @@ from time import sleep, time
 import re
 
 inicio = time()
-print(inicio)
+print('Rodando....')
+
 #Clica no botão aceitar cookies
 def aceitar_cookies(element_id):
     btn_close_cookies = navegador.find_element(By.ID, element_id)
@@ -37,11 +38,15 @@ def clicar_estado(estado):
     btn_achar_vaga = navegador.find_element(By.CSS_SELECTOR, s1)
     btn_achar_vaga.click()
 
-def scroll():
-    #altura = navegador.execute_script("return document.body.scrollHeight")
-    navegador.execute_script("window.scrollTo(0,document.body.scrollHeight)")
-    
-    sleep(5)
+def scroll(driver, qtd_scroll):
+   
+    i = 0
+    while i <= qtd_scroll:
+        #altura = navegador.execute_script("return document.body.scrollHeight")
+        driver.execute_script("window.scrollTo(0,document.body.scrollHeight)")
+        sleep(5)
+        i = i+1
+
 
 def vagas_lista(referencia_css_selector):
     #navegador.execute_script("window.scrollTo("+str(h1)+",document.body.scrollHeight)")
@@ -64,12 +69,12 @@ def requisicao_http(url):
     # Realiza a requisição HTTP para a URL de listagem de vagas
     try:
         response = requests.get(url)
-        response.raise_for_status()
+        #response.raise_for_status()
         return BeautifulSoup(response.content, 'html.parser')
     except:
         print(f"Erro ao acessar detalhes da vaga: {url}")
 
-def format_faixa_salarial(text):
+def format_text(text):
     text = text.replace('\r\n', '').strip()  # Remove quebras de linha
     text = ' '.join(text.split())  # Remove espaços extras
     return text
@@ -93,89 +98,106 @@ servico = Service(ChromeDriverManager().install())#para realizar uma atualizaç�
 navegador = webdriver.Chrome(service=servico, options=chrome_options)
 
 navegador.implicitly_wait(15)
-
 navegador.get('https://www.infojobs.com.br/')
-
-aceitar_cookies("didomi-notice-agree-button")
 
 lista_estados = ['sao paulo', 'rio de janeiro', 'minas gerais', 'bahia', 'distrito federal', 'santa catarina', 'Paraná', 'rio grande do sul']
 
-clicar_estado(lista_estados[3])
-
-scroll()
-
-link_das_vagas = vagas_lista("a[class='text-decoration-none']")
-
-navegador.quit()
-
-vagas =[]
-
-for url in link_das_vagas:
-    # Captura o valor do ID da vaga
-    vaga_id = re.findall('[0-9]+', url)[0]  # Extrai o ID da vaga
-
-    # Captura o valor do caminho relativo da URL
-    vaga_href = url
+for estado in lista_estados:
     
-    # Monta a URL completa para os detalhes da vaga
-    #detalhes_url = f"https://www.infojobs.com.br{vaga_href}"
-    detalhes_soup = requisicao_http(url).find('form')
-    
-    # Extrair o título da vaga
-    titulo_element = detalhes_soup.find('h2')
-    titulo = titulo_element.text.strip() if titulo_element else 'Título não disponível'
+    aceitar_cookies("didomi-notice-agree-button")
 
-    # Extrair o Nome da empresa da vaga
-    empresa_element = detalhes_soup.find('div', class_='h4').find('a')
-    empresa = empresa_element.text.strip() if empresa_element else 'Empresa confidencial'
+    clicar_estado(estado)
 
-    # Extrair o local e a faixa salarial
-    divs = detalhes_soup.find_all('div', class_='text-medium mb-4')
-    local = divs[0].contents[0].strip() if len(divs) > 0 else 'Local não identificado'
-    faixa_salarial = divs[1].contents[0].strip() if len(divs) > 1 else 'Faixa salarial não informada'
-    faixa_salarial = format_faixa_salarial(faixa_salarial)  # Formatar a faixa salarial
+    num_vagas = len(navegador.find_elements(By.CSS_SELECTOR, "a[class='text-decoration-none']"))
+    #total_vagas = int(navegador.find_element(By.CSS_SELECTOR, "span[class='small text-medium']").text.replace('.', ''))
 
-    # Extrair o Modelo de trabalho
-    modelo_element = detalhes_soup.find('div', class_='text-medium small font-weight-bold mb-4')
-    modelo = modelo_element.text.strip() if modelo_element else 'Modelo de trabalho não identificado'
+    scroll(navegador, 0)
 
-    # Extrair o tipo de contrato de trabalho
-    contrato_element = detalhes_soup.find('span', string='Tipo de contrato e Jornada:')
-    contrato = contrato_element.find_next_sibling(string=True).strip() if contrato_element else 'Tipo de contrato de trabalho não identificado'
+    print('QTS VAGAS: ', len(navegador.find_elements(By.CSS_SELECTOR, "a[class='text-decoration-none']")))
 
-    # Extrair Exigências
-    exigencias = verifica_elemento(detalhes_soup, 'Exigências')
+    link_das_vagas = vagas_lista("a[class='text-decoration-none']")
 
-    # Extrair Valorizado
-    valorizado = verifica_elemento(detalhes_soup, 'Valorizado')
+    navegador.quit()
 
-    # Extrair Benefícios
-    beneficios = verifica_elemento(detalhes_soup, 'Beneficios')
+    vagas =[]
+    j = 0
+    for url in link_das_vagas:
+        # Captura o valor do ID da vaga
+        vaga_id = re.findall('[0-9]+', url)[0]  # Extrai o ID da vaga
 
-    # Extrair Habilidades
-    habilidades_element = detalhes_soup.find_all('div', class_='tag mr-8 mb-8 tag-outline-primary tag-lg')
-    habilidades = [habilidade.find('span').text.strip() for habilidade in habilidades_element] if habilidades_element else ['Habilidades não identificadas']
+        # Captura o valor do caminho relativo da URL
+        vaga_href = url
+
+        # Monta a URL completa para os detalhes da vaga
+        #detalhes_url = f"https://www.infojobs.com.br{vaga_href}"
+        print("vaga: ", j)
+        try:
+            detalhes_soup = requisicao_http(url)
+        except:
+            continue
+        
+        # Extrair o título da vaga
+        titulo_element = detalhes_soup.find('h2')
+        titulo = titulo_element.text.strip() if titulo_element else 'Título não disponível'
+
+        # Extrair o Nome da empresa da vaga
+        empresa_element = detalhes_soup.find('div', class_='h4').find('a')
+        empresa = empresa_element.text.strip() if empresa_element else 'Empresa confidencial'
+
+        descricao_element = detalhes_soup.findAll('p')#, attrs={'class': 'mb-16 text-break white-space-pre-line'})
+        descricao = format_text(descricao_element[0].text.strip())
+
+        # Extrair o local e a faixa salarial
+        divs = detalhes_soup.find_all('div', class_='text-medium mb-4')
+        local = divs[0].contents[0].strip() if len(divs) > 0 else 'Local não identificado'
+        faixa_salarial = divs[1].contents[0].strip() if len(divs) > 1 else 'Faixa salarial não informada'
+        faixa_salarial = format_text(faixa_salarial)  # Formatar a faixa salarial
+
+        # Extrair o Modelo de trabalho
+        modelo_element = detalhes_soup.find('div', class_='text-medium small font-weight-bold mb-4')
+        modelo = modelo_element.text.strip() if modelo_element else 'Modelo de trabalho não identificado'
+
+        # Extrair o tipo de contrato de trabalho
+        contrato_element = detalhes_soup.find('span', string='Tipo de contrato e Jornada:')
+        contrato = contrato_element.find_next_sibling(string=True).strip() if contrato_element else 'Tipo de contrato de trabalho não identificado'
+
+        # Extrair Exigências
+        exigencias = verifica_elemento(detalhes_soup, 'Exigências')
+
+        # Extrair Valorizado
+        valorizado = verifica_elemento(detalhes_soup, 'Valorizado')
+
+        # Extrair Benefícios
+        beneficios = verifica_elemento(detalhes_soup, 'Beneficios')
+
+        # Extrair Habilidades
+        habilidades_element = detalhes_soup.find_all('div', class_='tag mr-8 mb-8 tag-outline-primary tag-lg')
+        habilidades = [habilidade.find('span').text.strip() for habilidade in habilidades_element] if habilidades_element else ['Habilidades não identificadas']
 
 
-    # Adiciona os dados coletados na lista de vagas
-    vagas.append({
-        'id_da_vaga': vaga_id,
-        'titulo_da_vaga': titulo,
-        'nome_da_empresa': empresa,
-        'local_da_empresa': local,
-        'modelo_de_trabalho': modelo,
-        'tipo_de_contrato': contrato,
-        'faixa_salarial': faixa_salarial,
-        'exigencias': exigencias,
-        'valorizado': valorizado,
-        'beneficios': beneficios,
-        'habilidades': habilidades,
-        'url_da_vaga': vaga_href
-    })
+        # Adiciona os dados coletados na lista de vagas
+        vagas.append({
+            'id_da_vaga': vaga_id,
+            'titulo_da_vaga': titulo,
+            'nome_da_empresa': empresa,
+            'local_da_empresa': local,
+            'modelo_de_trabalho': modelo,
+            'tipo_de_contrato': contrato,
+            'faixa_salarial': faixa_salarial,
+            'descricao_da_vaga': descricao,
+            'exigencias': exigencias,
+            'valorizado': valorizado,
+            'beneficios': beneficios,
+            'habilidades': habilidades,
+            'url_da_vaga': vaga_href
+        })
+
+        j = j+1
+
 
 # Escreve os dados coletados em um arquivo JSON
 with open('vagas.json', 'w', encoding='utf-8') as file:
-    json.dump(vagas, file, ensure_ascii=False, indent=4)
+   json.dump(vagas, file, ensure_ascii=False, indent=4)
 
 print("Dados salvos em vagas.json")
 
