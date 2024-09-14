@@ -26,10 +26,13 @@ df_exig = pd.DataFrame(df_vagas['exigencias'].to_list())
 
 df_vagas['escolaridade_min'] =  df_exig[0].str.split(':').str[1]
 
-df_vagas['idioma'] = df_exig[1].astype('str')
-
-df_vagas['idioma'] = df_vagas['idioma'].apply(lambda x : x.split(','))
-df_vagas['idioma'] = df_vagas['idioma'].apply(lambda lista: [{'language': s.split()[0], 'nivel': re.findall(r'\(([^]]+)\)', s)[0]} for s in lista] if lista != ['None'] else lista)
+df_exig = pd.DataFrame(df_vagas['exigencias'].to_list())
+try:
+    df_vagas['idioma'] = df_exig[1].astype('str')
+    df_vagas['idioma'] = df_vagas['idioma'].apply(lambda x : x.split(','))
+    df_vagas['idioma'] = df_vagas['idioma'].apply(lambda lista: [{'language': s.split()[0], 'nivel': re.findall(r'\(([^]]+)\)', s)[0]} for s in lista] if lista != ['None'] else lista)
+except:
+    print("Base sem idiomas")
 
 df_vagas.drop('exigencias', axis=1, inplace=True)
 
