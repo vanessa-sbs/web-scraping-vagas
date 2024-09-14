@@ -92,12 +92,15 @@ def chrome_opcoes():#'https://www.infojobs.com.br/'
     #chrome_options.add_argument('window-size=1500,2000') #Define o tamanho que vc quer do navegador
     #chrome_options.add_argument('--headless')
     chrome_options.add_argument('--incognito')
+    chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
+    chrome_options.add_experimental_option('useAutomationExtension', False)
+
 
     servico = Service(ChromeDriverManager().install())#para realizar uma atualização do chrome driver para acompanhar a versao do Chrome
     return webdriver.Chrome(service=servico, options=chrome_options)
 
 
-estados = ['sao paulo', 'rio de janeiro']#, 'minas gerais', 'bahia', 'distrito federal', 'santa catarina', 'Paraná', 'rio grande do sul']
+estados = ['sao paulo', 'rio de janeiro', 'minas gerais', 'bahia', 'distrito federal', 'santa catarina', 'Paraná', 'rio grande do sul']
 
 vagas =[]
 
@@ -117,7 +120,7 @@ for estado in estados:
     num_vagas = len(navegador.find_elements(By.CSS_SELECTOR, "a[class='text-decoration-none']"))
     #total_vagas = int(navegador.find_element(By.CSS_SELECTOR, "span[class='small text-medium']").text.replace('.', ''))
 
-    #scroll(navegador, 0)
+    scroll(navegador, 0)
 
     print('QTS VAGAS: ', len(navegador.find_elements(By.CSS_SELECTOR, "a[class='text-decoration-none']")))
     print('Estado: ', estado)
@@ -203,7 +206,7 @@ for estado in estados:
 #################### TRATAEMNTOS DADOS ####################
 import pandas as pd
 
-df = pd.read_json(json.dumps(vagas, ensure_ascii=False, indent=4))
+df = pd.read_json(json.dumps(vagas, indent=4))
 
 #Separa cidade e sigla do estado da variavel local_da_empresa e cria duas colunas para cada 
 df[['cidade_empresa', 'estado_empresa']] = df['local_da_empresa'].str.split('-', expand=True)
