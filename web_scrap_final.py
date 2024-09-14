@@ -12,7 +12,6 @@ from selenium.webdriver import ActionChains
 from time import sleep, time
 import re
 
-inicio = time()
 print('Rodando....')
 
 #Clica no botão aceitar cookies
@@ -70,7 +69,7 @@ def requisicao_http(url):
     try:
         response = requests.get(url)
         #response.raise_for_status()
-        return BeautifulSoup(response.content, 'html.parser')
+        return BeautifulSoup(response.text, 'html.parser')
     except:
         print(f"Erro ao acessar detalhes da vaga: {url}")
 
@@ -87,22 +86,29 @@ def verifica_elemento(html_content, elemento):
     else:
         return [elemento + ' não identificadas']
     
+def chrome_opcoes():#'https://www.infojobs.com.br/'
+    chrome_options = Options()
+    chrome_options.add_experimental_option("detach", True) #necessario para navegador não abrir e fechar automaticamente
+    #chrome_options.add_argument('window-size=1500,2000') #Define o tamanho que vc quer do navegador
+    #chrome_options.add_argument('--headless')
+    chrome_options.add_argument('--incognito')
 
-chrome_options = Options()
-chrome_options.add_experimental_option("detach", True) #necessario para navegador não abrir e fechar automaticamente
-#chrome_options.add_argument('window-size=1500,2000') #Define o tamanho que vc quer do navegador
-#chrome_options.add_argument('--headless')
-chrome_options.add_argument('--incognito')
+    servico = Service(ChromeDriverManager().install())#para realizar uma atualização do chrome driver para acompanhar a versao do Chrome
+    return webdriver.Chrome(service=servico, options=chrome_options)
 
-servico = Service(ChromeDriverManager().install())#para realizar uma atualização do chrome driver para acompanhar a versao do Chrome
-navegador = webdriver.Chrome(service=servico, options=chrome_options)
 
-navegador.implicitly_wait(15)
-navegador.get('https://www.infojobs.com.br/')
+estados = ['sao paulo', 'rio de janeiro', 'minas gerais', 'bahia', 'distrito federal', 'santa catarina', 'Paraná', 'rio grande do sul']
 
-lista_estados = ['sao paulo', 'rio de janeiro', 'minas gerais', 'bahia', 'distrito federal', 'santa catarina', 'Paraná', 'rio grande do sul']
+vagas =[]
 
-for estado in lista_estados:
+for estado in estados:
+
+    navegador = chrome_opcoes()
+    navegador.implicitly_wait(15)
+    try:
+        navegador.get('https://www.infojobs.com.br/')
+    except:
+        continue
     
     aceitar_cookies("didomi-notice-agree-button")
 
@@ -111,33 +117,29 @@ for estado in lista_estados:
     num_vagas = len(navegador.find_elements(By.CSS_SELECTOR, "a[class='text-decoration-none']"))
     #total_vagas = int(navegador.find_element(By.CSS_SELECTOR, "span[class='small text-medium']").text.replace('.', ''))
 
-    scroll(navegador, 0)
+    scroll(navegador, 1)
 
     print('QTS VAGAS: ', len(navegador.find_elements(By.CSS_SELECTOR, "a[class='text-decoration-none']")))
-
+    print('Estado: ', estado)
+    
     link_das_vagas = vagas_lista("a[class='text-decoration-none']")
 
     navegador.quit()
 
-    vagas =[]
-    j = 0
     for url in link_das_vagas:
         # Captura o valor do ID da vaga
         vaga_id = re.findall('[0-9]+', url)[0]  # Extrai o ID da vaga
 
         # Captura o valor do caminho relativo da URL
         vaga_href = url
-
-        # Monta a URL completa para os detalhes da vaga
-        #detalhes_url = f"https://www.infojobs.com.br{vaga_href}"
-        print("vaga: ", j)
-        try:
+      
+        if requisicao_http(url):
             detalhes_soup = requisicao_http(url)
-        except:
-            continue
-        
+        else:
+            continue 
+         
         # Extrair o título da vaga
-        titulo_element = detalhes_soup.find('h2')
+        titulo_element = detalhes_soup.find('h2', class_="js_vacancyHeaderTitle")
         titulo = titulo_element.text.strip() if titulo_element else 'Título não disponível'
 
         # Extrair o Nome da empresa da vaga
@@ -192,18 +194,54 @@ for estado in lista_estados:
             'url_da_vaga': vaga_href
         })
 
-        j = j+1
 
 
 # Escreve os dados coletados em um arquivo JSON
-with open('vagas.json', 'w', encoding='utf-8') as file:
-   json.dump(vagas, file, ensure_ascii=False, indent=4)
+#with open('vagas2.json', 'w', encoding='utf-8') as file:
+#   json.dump(vagas, file, ensure_ascii=False, indent=4)
 
-print("Dados salvos em vagas.json")
+#################### TRATAEMNTOS DADOS ####################
+import pandas as pd
 
-fim = time()
+df = pd.read_json(json.dump(vagas, ensure_ascii=False, indent=4))
 
-print(fim - inicio)
+#Separa cidade e sigla do estado da variavel local_da_empresa e cria duas colunas para cada 
+df[['cidade_empresa', 'estado_empresa']] = df['local_da_empresa'].str.split('-', expand=True)
+df_vagas = df.drop('local_da_empresa', axis=1)
+
+#Cria colunas tipo_contrato e periodo_contrato a partir de tipo_de_contrato 
+df_vagas[['tipo_contrato','periodo_contrato']] = df_vagas['tipo_de_contrato'].str.split(r'[-]+', expand=True)
+df_vagas.drop('tipo_de_contrato', axis=1, inplace=True)
+
+#Quebra faixa salaria em duas colunas: salario_min e salario_max
+aux = df['faixa_salarial'].str.split(r'[\s]+', expand=True)
+aux.drop([0,2,3,5,6], axis=1, inplace=True)
+aux = aux.fillna(value='0')
+df_vagas['salario_max'], df_vagas['salario_min']= aux[4].str.replace('.', '').str.replace(',', '.'), aux[1].str.replace('.', '').str.replace(',', '.').str.replace('a', '0')
+df_vagas.drop('faixa_salarial', axis=1, inplace=True)
+
+#Habilidades
+df_vagas['habilidades'] = df_vagas['habilidades'].apply(lambda lista: [s.upper() for s in lista])
+
+#Extrai de exigencias escolaridade minima e idiomas
+df_exig = pd.DataFrame(df_vagas['exigencias'].to_list())
+
+df_vagas['escolaridade_min'] =  df_exig[0].str.split(':').str[1]
+
+df_vagas['idioma'] = df_exig[1].astype('str')
+
+df_vagas['idioma'] = df_vagas['idioma'].apply(lambda x : x.split(','))
+df_vagas['idioma'] = df_vagas['idioma'].apply(lambda lista: [{'language': s.split()[0], 'nivel': re.findall(r'\(([^]]+)\)', s)[0]} for s in lista] if lista != ['None'] else lista)
+
+df_vagas.drop('exigencias', axis=1, inplace=True)
+
+#Valorizado tiramos experiencia desejada
+df_vagas['experiencia_desejada'] = df_vagas['valorizado'].apply(lambda s: s[0].split(':')[1] if ('Experiência desejada' in s[0])  else 'Não informado')
+df_vagas.drop('valorizado', axis=1, inplace=True)
+
+json_string = df.to_json(orient='records', indent=4)
+#print("Dados salvos em vagas.json")
+
 
 
 
