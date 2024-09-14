@@ -97,7 +97,7 @@ def chrome_opcoes():#'https://www.infojobs.com.br/'
     return webdriver.Chrome(service=servico, options=chrome_options)
 
 
-estados = ['sao paulo', 'rio de janeiro', 'minas gerais', 'bahia', 'distrito federal', 'santa catarina', 'Paraná', 'rio grande do sul']
+estados = ['sao paulo', 'rio de janeiro']#, 'minas gerais', 'bahia', 'distrito federal', 'santa catarina', 'Paraná', 'rio grande do sul']
 
 vagas =[]
 
@@ -117,7 +117,7 @@ for estado in estados:
     num_vagas = len(navegador.find_elements(By.CSS_SELECTOR, "a[class='text-decoration-none']"))
     #total_vagas = int(navegador.find_element(By.CSS_SELECTOR, "span[class='small text-medium']").text.replace('.', ''))
 
-    scroll(navegador, 1)
+    #scroll(navegador, 0)
 
     print('QTS VAGAS: ', len(navegador.find_elements(By.CSS_SELECTOR, "a[class='text-decoration-none']")))
     print('Estado: ', estado)
@@ -203,7 +203,7 @@ for estado in estados:
 #################### TRATAEMNTOS DADOS ####################
 import pandas as pd
 
-df = pd.read_json(json.dump(vagas, ensure_ascii=False, indent=4))
+df = pd.read_json(json.dumps(vagas, ensure_ascii=False, indent=4))
 
 #Separa cidade e sigla do estado da variavel local_da_empresa e cria duas colunas para cada 
 df[['cidade_empresa', 'estado_empresa']] = df['local_da_empresa'].str.split('-', expand=True)
@@ -239,8 +239,8 @@ df_vagas.drop('exigencias', axis=1, inplace=True)
 df_vagas['experiencia_desejada'] = df_vagas['valorizado'].apply(lambda s: s[0].split(':')[1] if ('Experiência desejada' in s[0])  else 'Não informado')
 df_vagas.drop('valorizado', axis=1, inplace=True)
 
-json_string = df.to_json(orient='records', indent=4)
-#print("Dados salvos em vagas.json")
+json_string = df.to_json(orient='records', indent=4, force_ascii=False)
+print("Dados salvos em vagas.json", json_string)
 
 
 
